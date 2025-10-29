@@ -42,7 +42,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api", comentariosRoutes); // /api/posts/:postId/comments
 app.use("/api/messages", mensajesRoutes);
-app.get("/", (_req, res) => res.send("Zen Backend API"));
+app.get("/", (_req, res) => res.send("Zen Backend API:D"));
 
 // ==================== SOCKET.IO ====================
 
