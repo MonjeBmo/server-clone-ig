@@ -1,6 +1,7 @@
 // controllers/faceDetection.controller.js
 import * as faceDetectionService from '../services/faceDetection.service.js';
 import { pool } from '../Config/db.js';
+import { resolveMediaUrl } from '../utils/media.util.js';
 
 /**
  * POST /api/face-detection/analyze
@@ -65,7 +66,7 @@ export async function analyzePostImage(req, res) {
 
     // Obtener el post de la base de datos
     const query = `
-      SELECT id, imagen_url, video_url, tipo_contenido 
+      SELECT id, url_contenido, tipo 
       FROM posts 
       WHERE id = $1
     `;
@@ -80,24 +81,35 @@ export async function analyzePostImage(req, res) {
 
     const post = result.rows[0];
 
-    // Verificar que el post tenga una imagen
-    if (!post.imagen_url && post.tipo_contenido !== 'imagen') {
+    // Verificar que el post tenga contenido
+    if (!post.url_contenido) {
       return res.status(400).json({
         success: false,
-        error: 'El post no contiene una imagen para analizar'
+        error: 'El post no contiene una URL de contenido'
       });
     }
 
-    // Verificar que el post no sea un video
-    if (post.video_url || post.tipo_contenido === 'video') {
+    // Verificar que el post sea una imagen
+    if (post.tipo === 'video') {
       return res.status(400).json({
         success: false,
         error: 'El análisis de videos no está soportado actualmente'
       });
     }
 
+    // Resolver la URL del contenido (S3, CloudFront, etc.)
+    const imageUrl = await resolveMediaUrl(post.url_contenido);
+    
+    if (!imageUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'No se pudo resolver la URL de la imagen',
+        details: 'Este post tiene una URL local legacy (/uploads/...) que ya no existe. Solo se pueden analizar posts con imágenes en S3.'
+      });
+    }
+
     // Analizar la imagen desde la URL
-    const analysis = await faceDetectionService.analyzeImageFromUrl(post.imagen_url);
+    const analysis = await faceDetectionService.analyzeImageFromUrl(imageUrl);
 
     // Opcional: Guardar el análisis en la base de datos para cache
     const updateQuery = `
