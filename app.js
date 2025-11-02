@@ -15,6 +15,8 @@ import { env } from "./Config/env.js";
 import { verifyToken } from "./utils/jwt.util.js";
 import { pool } from "./Config/db.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
+import faceDetectionRoutes from "./routes/faceDetection.routes.js";
+import { loadModels } from "./services/faceDetection.service.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -42,6 +44,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api", comentariosRoutes); // /api/posts/:postId/comments
 app.use("/api/messages", mensajesRoutes);
+app.use("/api/face-detection", faceDetectionRoutes);
 app.get("/", (_req, res) => res.send("Zen Backend API:D"));
 
 // ==================== SOCKET.IO ====================
@@ -197,6 +200,16 @@ io.on("connection", (socket) => {
 
 // Exportar io para usarlo en otros lugares si es necesario
 export { io };
+
+// Inicializar modelos de face-api.js al arrancar el servidor
+loadModels()
+  .then(() => {
+    console.log('✅ Modelos de face-api.js cargados exitosamente');
+  })
+  .catch((error) => {
+    console.error('⚠️ Error cargando modelos de face-api.js:', error.message);
+    console.log('ℹ️ Los modelos se cargarán cuando se use el servicio por primera vez');
+  });
 
 httpServer.listen(env.port, () => {
   console.log(`🚀 Servidor corriendo en puerto ${env.port}`);
